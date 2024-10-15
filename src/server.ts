@@ -1,4 +1,4 @@
-import express from 'express';
+// import express from 'express'; // don't need server
 import { QueryResult } from 'pg';
 import { pool, connectToDb } from './connection.js';
 
@@ -6,32 +6,12 @@ import inquirer from 'inquirer';
 
 await connectToDb();
 
-const PORT = process.env.PORT || 3001;
-const app = express();
+// const PORT = process.env.PORT || 3001;
+// const app = express();
 
-// Express middleware
-app.use(express.urlencoded({ extended: false }));
-app.use(express.json());
-
-// pool.query(
-//   `DELETE FROM favorite_books WHERE id = $1`,
-//   [deletedRow],
-//   (err: Error, result: QueryResult) => {
-//   if (err) {
-//     console.log(err);
-//   } else {
-//     console.log(`${result.rowCount} row(s) deleted!`);
-//   }
-// });
-
-// // Query database
-// pool.query('SELECT * FROM favorite_books', (err: Error, result: QueryResult) => {
-//   if (err) {
-//     console.log(err);
-//   } else if (result) {
-//     console.log(result.rows);
-//   }
-// });
+// // Express middleware
+// app.use(express.urlencoded({ extended: false }));
+// app.use(express.json());
 
 const mainOptions = [
   'View All Employees', // 0
@@ -44,29 +24,28 @@ const mainOptions = [
   'Quit', // 7
 ];
 
-const deptOptions = [
+const addDeptOptions = [
   'What is the name of the department?', // 0
 ];
 
-const roleOptions = [
+const addRoleOptions = [
   'What is the name of the role?', // 0
   'What is the salary of the role?', // 1
-  'Which department does the role belong to?', // 2
+  'Which department does the role belong to?', // 2 // dropdown
 ];
 
-const emplOptions = [
+const addEmplOptions = [
   'What is the employee\'s first name?', // 0
   'What is the employee\'s last  name?', // 1
-  'What is the employee\'s role?', // 2
+  'What is the employee\'s role?', // 2 // dropdown
 ];
 
 const updateEmplRoleOptions = [
-  'Which employee\'s role do you want to update?', // 0
-  'Which role do you want to assign the selected employee?', // 1
-  'Updated employee\'s role', // 2
+  'Which employee\'s role do you want to update?', // 0 // dropdown
+  'Which role do you want to assign the selected employee?', // 1 // dropdown
 ];
 
-function init() {
+async function init() {
   inquirer
     .prompt([
       {
@@ -76,33 +55,37 @@ function init() {
         name: 'do',
       },
     ])
-    .then((response) => {
+    .then(async(response) => {
       if (response.do === mainOptions[0]) { // view all e
         pool.query(
-          `SELECT
-roles.title, departments.name, roles.salary FROM roles
-JOIN departments ON roles.department_id = departments.id`,
-          (err: Error, _result: QueryResult) => {
+          `SELECT e1.first_name, e1.last_name, r.title, d.name AS department, r.salary, CONCAT(e2.first_name, ' ', e2.last_name) AS manager FROM roles AS r JOIN departments AS d ON r.department_id = d.id JOIN employees AS e1 ON r.id = e1.role_id LEFT OUTER JOIN employees AS e2 on e1.id = e2.manager_id ORDER BY r.id ASC`,
+          (err: Error, result: QueryResult) => {
             if (err) {
               console.log(err);
             } else {
-              console.log(`Showing employees table`);
+              console.table(result.rows);
+              init();
             }
           });
       }
       else if (response.do === mainOptions[1]) { // add e
         inquirer
           .prompt([
-            // { // 0
-            //     type: 'input',
-            //     message: questions[0],
-            //     name: 'title',
-            // },
-            {
+            { // 0
+                type: 'input',
+                message: addEmplOptions[0], // firstname
+                name: 'firstName',
+            },
+            { // 1
+                type: 'input',
+                message: addEmplOptions[1], // lastname
+                name: 'lastName',
+            },
+            { // 2
               type: 'list',
-              message: 'What would you like to do?',
-              choices: mainOptions,
-              name: 'do',
+              message: addEmplOptions[2], // role
+              choices: mainOptions, // need to update
+              name: 'employeeRole',
             },
           ])
           .then((response) => {
@@ -120,16 +103,17 @@ JOIN departments ON roles.department_id = departments.id`,
       else if (response.do === mainOptions[2]) { // update e r
         inquirer
           .prompt([
-            // { // 0
-            //     type: 'input',
-            //     message: questions[0],
-            //     name: 'title',
-            // },
             {
               type: 'list',
-              message: 'What would you like to do?',
-              choices: mainOptions,
-              name: 'do',
+              message: updateEmplRoleOptions[0], // which e
+              choices: mainOptions, // need to update
+              name: 'employee',
+            },
+            {
+              type: 'list',
+              message: updateEmplRoleOptions[1], // which r
+              choices: mainOptions, // need to update
+              name: 'emplRole',
             },
           ])
           .then((response) => {
@@ -139,37 +123,41 @@ JOIN departments ON roles.department_id = departments.id`,
                 if (err) {
                   console.log(err);
                 } else {
-                  console.log(`Employee added`);
+                  console.log(`Updated employee\'s role`);
                 }
               })
           });
       }
       else if (response.do === mainOptions[3]) { // view all r
         pool.query(
-          `SELECT
-roles.title, departments.name, roles.salary FROM roles
-JOIN departments ON roles.department_id = departments.id`,
-          (err: Error, _result: QueryResult) => {
+          `SELECT roles.title, departments.name AS department, roles.salary FROM roles JOIN departments ON roles.department_id = departments.id`,
+          (err: Error, result: QueryResult) => {
             if (err) {
               console.log(err);
             } else {
-              console.log(`Showing roles table`);
+              console.table(result.rows);
+              init();
             }
           });
       }
       else if (response.do === mainOptions[4]) { // add r
         inquirer
           .prompt([
-            // { // 0
-            //     type: 'input',
-            //     message: questions[0],
-            //     name: 'title',
-            // },
-            {
+            { // 0
+                type: 'input',
+                message: addRoleOptions[0], // r name
+                name: 'roleName',
+            },
+            { // 1
+                type: 'input',
+                message: addRoleOptions[1], // r salary
+                name: 'roleSalary',
+            },
+            { // 2
               type: 'list',
-              message: 'What would you like to do?',
-              choices: mainOptions,
-              name: 'do',
+              message: addRoleOptions[2], // r dept
+              choices: mainOptions, // need to update
+              name: 'roleDept',
             },
           ])
           .then((response) => {
@@ -185,31 +173,24 @@ JOIN departments ON roles.department_id = departments.id`,
           });
       }
       else if (response.do === mainOptions[5]) { // view all d
-        pool.query(
-          `SELECT
-roles.title, departments.name, roles.salary FROM roles
-JOIN departments ON roles.department_id = departments.id`,
-          (err: Error, _result: QueryResult) => {
+        pool.query (
+          `SELECT departments.name FROM departments`,
+          (err: Error, result: QueryResult) => {
             if (err) {
               console.log(err);
             } else {
-              console.log(`Showing departments table`);
+              console.table(result.rows);
+              init();
             }
           });
       }
       else if (response.do === mainOptions[6]) { // add d
         inquirer
           .prompt([
-            // { // 0
-            //     type: 'input',
-            //     message: questions[0],
-            //     name: 'title',
-            // },
-            {
-              type: 'list',
-              message: 'What would you like to do?',
-              choices: mainOptions,
-              name: 'do',
+            { // 0
+                type: 'input',
+                message: addDeptOptions[0], // d name
+                name: 'deptName',
             },
           ])
           .then((response) => {
@@ -225,7 +206,9 @@ JOIN departments ON roles.department_id = departments.id`,
           });
       }
       else if (response.do === mainOptions[7]) { // q
-
+        // this.exit = true; // doesn't work
+        // return; // doesn't work
+        process.exit(); // this one works
       }
     })
 }
@@ -233,11 +216,11 @@ JOIN departments ON roles.department_id = departments.id`,
 // Function call to initialize app
 init();
 
-// Default response for any other request (Not Found)
-app.use((_req, res) => {
-  res.status(404).end();
-});
+// // Default response for any other request (Not Found)
+// app.use((_req, res) => {
+//   res.status(404).end();
+// });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// app.listen(PORT, () => {
+//   console.log(`Server running on port ${PORT}`);
+// });
