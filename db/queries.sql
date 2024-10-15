@@ -9,7 +9,6 @@ JOIN departments ON roles.department_id = departments.id
 
 -- all employees table
 SELECT
-SELECT
 e1.first_name, 
 e1.last_name, 
 r.title, 
