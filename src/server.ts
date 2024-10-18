@@ -5,6 +5,8 @@ import inquirer from 'inquirer';
 
 await connectToDb();
 
+
+// array of options for the menu() inquirer function
 const mainOptions = [
     'View All Employees', // 0
     'Add Employee', // 1
@@ -16,26 +18,31 @@ const mainOptions = [
     'Quit', // 7
 ];
 
+// array of options for the addDept() inquirer function
 const addDeptOptions = [
     'What is the name of the department?', // 0
 ];
 
+// array of options for the addRole() inquirer function
 const addRoleOptions = [
     'What is the name of the role?', // 0
     'What is the salary of the role?', // 1
     'Which department does the role belong to?', // 2 // dropdown
 ];
 
+// array of options for the addEmployee() inquirer function
 const addEmplOptions = [
     'What is the employee\'s first name?', // 0
     'What is the employee\'s last  name?', // 1
     'What is the employee\'s role?', // 2 // dropdown
 ];
 
+// array of options for the updateEmployeeRole() inquirer function
 const updateEmplRoleOptions = [
     'Which employee\'s role do you want to update?', // 0 // dropdown
     'Which role do you want to assign the selected employee?', // 1 // dropdown
 ];
+
 
 // calls main menu and then all other choices based on selection
 function menu() {
@@ -74,10 +81,10 @@ function menu() {
                 case mainOptions[7]: // QUIT
                     process.exit();
             }
-        })
+        });
 }
 
-// done
+
 function viewAllEmployees() {
     pool.query(
         `SELECT e1.first_name, e1.last_name, r.title, d.name AS department, r.salary, CONCAT(e2.first_name, ' ', e2.last_name) AS manager 
@@ -91,37 +98,8 @@ function viewAllEmployees() {
                 console.table(result.rows);
                 menu();
             }
-        })
-};
-
-// done
-function viewAllRoles() {
-    pool.query(
-        `SELECT roles.title, departments.name AS department, roles.salary FROM roles 
-        JOIN departments ON roles.department_id = departments.id`,
-        (err: Error, result: QueryResult) => {
-            if (err) {
-                console.log(err);
-            } else {
-                console.table(result.rows);
-                menu();
-            }
-        })
-};
-
-// done
-function viewAllDepts() {
-    pool.query(
-        'SELECT departments.name FROM departments',
-        (err: Error, result: QueryResult) => {
-            if (err) {
-                console.log(err);
-            } else {
-                console.table(result.rows);
-                menu();
-            }
-        })
-};
+        });
+}
 
 async function addEmployee() {
   const roles = await pool.query('SELECT id, title FROM roles');
@@ -159,9 +137,9 @@ async function addEmployee() {
                       console.log(`Employee ${response.newEmployeeFirstName} ${response.newEmployeeLastName} added!`);
                       menu();
                   }
-              })
-        })
-};
+              });
+        });
+}
 
 async function updateEmployeeRole() {
   const employees = await pool.query('SELECT id, CONCAT(e.first_name, \' \', e.last_name) AS full_name FROM employees AS e');
@@ -192,10 +170,6 @@ async function updateEmployeeRole() {
             },
         ])
         .then((response) => {
-          // add console logs
-          // console.log(response.updatedEmployeeRole);
-          // console.log(response.updatedEmployee);
-          // menu(); // remove when done
             pool.query(
               'UPDATE employees SET role_id = $1 WHERE id = $2',
               [response.updatedEmployeeRole, response.updatedEmployee],
@@ -203,15 +177,27 @@ async function updateEmployeeRole() {
                   if (err) {
                       console.log(err);
                   } else {
-                      // console.log(`Updated ${response.updatedEmployee}\'s role to ${response.updatedEmployeeRole}!`); //print name instead of numbers?
                       console.log(`Updated employee\'s role!`);
                       menu();
                   }
-              })
-        })
-};
+              });
+        });
+}
 
-// done
+function viewAllRoles() {
+  pool.query(
+      `SELECT roles.title, departments.name AS department, roles.salary FROM roles 
+      JOIN departments ON roles.department_id = departments.id`,
+      (err: Error, result: QueryResult) => {
+          if (err) {
+              console.log(err);
+          } else {
+              console.table(result.rows);
+              menu();
+          }
+      });
+}
+
 async function addRole() {
     const depts = await pool.query('SELECT id, name FROM departments');
     const deptsObject = depts.rows;
@@ -248,11 +234,23 @@ async function addRole() {
                         console.log(`${response.newRoleName} role added!`);
                         menu();
                     }
-                })
-        })
-};
+                });
+        });
+}
 
-// done
+function viewAllDepts() {
+  pool.query(
+      'SELECT departments.name FROM departments',
+      (err: Error, result: QueryResult) => {
+          if (err) {
+              console.log(err);
+          } else {
+              console.table(result.rows);
+              menu();
+          }
+      });
+}
+
 function addDept() {
     inquirer
         .prompt([
@@ -273,9 +271,9 @@ function addDept() {
                         console.log(`${response.newDeptName} department added!`);
                         menu();
                     }
-                })
-        })
-};
+                });
+        });
+}
 
 
 // Function call to initialize app
