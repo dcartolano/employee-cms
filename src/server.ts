@@ -77,9 +77,13 @@ function menu() {
         })
 }
 
+// done
 function viewAllEmployees() {
     pool.query(
-        `SELECT e1.first_name, e1.last_name, r.title, d.name AS department, r.salary, CONCAT(e2.first_name, ' ', e2.last_name) AS manager FROM roles AS r JOIN departments AS d ON r.department_id = d.id JOIN employees AS e1 ON r.id = e1.role_id LEFT OUTER JOIN employees AS e2 on e1.id = e2.manager_id ORDER BY r.id ASC`,
+        `SELECT e1.first_name, e1.last_name, r.title, d.name AS department, r.salary, CONCAT(e2.first_name, ' ', e2.last_name) AS manager 
+        FROM roles AS r 
+        JOIN departments AS d ON r.department_id = d.id 
+        JOIN employees AS e1 ON r.id = e1.role_id LEFT OUTER JOIN employees AS e2 on e1.id = e2.manager_id ORDER BY r.id ASC`,
         (err: Error, result: QueryResult) => {
             if (err) {
                 console.log(err);
@@ -90,9 +94,11 @@ function viewAllEmployees() {
         })
 };
 
+// done
 function viewAllRoles() {
     pool.query(
-        `SELECT roles.title, departments.name AS department, roles.salary FROM roles JOIN departments ON roles.department_id = departments.id`,
+        `SELECT roles.title, departments.name AS department, roles.salary FROM roles 
+        JOIN departments ON roles.department_id = departments.id`,
         (err: Error, result: QueryResult) => {
             if (err) {
                 console.log(err);
@@ -103,9 +109,10 @@ function viewAllRoles() {
         })
 };
 
+// done
 function viewAllDepts() {
     pool.query(
-        `SELECT departments.name FROM departments`,
+        'SELECT departments.name FROM departments',
         (err: Error, result: QueryResult) => {
             if (err) {
                 console.log(err);
@@ -116,93 +123,113 @@ function viewAllDepts() {
         })
 };
 
-function addEmployee() {
+async function addEmployee() {
+  const roles = await pool.query('SELECT id, title FROM roles');
+  const rolesObject = roles.rows;
     inquirer
         .prompt([
             { // 0
                 type: 'input',
                 message: addEmplOptions[0], // firstname
-                name: 'firstName',
+                name: 'newEmployeeFirstName',
             },
             { // 1
                 type: 'input',
                 message: addEmplOptions[1], // lastname
-                name: 'lastName',
+                name: 'newEmployeeLastName',
             },
             { // 2
                 type: 'list',
                 message: addEmplOptions[2], // role
-                choices: ['test', 'test'], // need to update
-                name: 'employeeRole',
+                choices: rolesObject.map(role => ({
+                  name: role.title,
+                  value: role.id
+              })),
+                name: 'newEmployeeRole',
             },
         ])
         .then((response) => {
-            // pool.query(
-            //     `${response}`,
-            //     (err: Error, _result: QueryResult) => {
-            //         if (err) {
-            //             console.log(err);
-            //         } else {
-            //             console.log(`Employee added`);
-            //             menu();
-            //         }
-            //     })
-            console.log(response); // remove once above is working
-            menu(); // remove once above is working
+            pool.query(
+              'INSERT INTO employees (first_name, last_name, role_id) VALUES ($1, $2, $3)',
+              [response.newEmployeeFirstName, response.newEmployeeLastName, response.newEmployeeRole],
+              (err: Error, _result: QueryResult) => {
+                  if (err) {
+                      console.log(err);
+                  } else {
+                      console.log(`Employee ${response.newEmployeeFirstName} ${response.newEmployeeLastName} added!`);
+                      menu();
+                  }
+              })
         })
 };
 
-function updateEmployeeRole() {
+async function updateEmployeeRole() {
+  const employees = await pool.query('SELECT id, CONCAT(e.first_name, \' \', e.last_name) AS full_name FROM employees AS e');
+  const employeesObject = employees.rows;
+  console.log(employeesObject);
+  const roles = await pool.query('SELECT id, title FROM roles');
+  const rolesObject = roles.rows;
+  console.log(rolesObject);
     inquirer
         .prompt([
             {
                 type: 'list',
-                message: updateEmplRoleOptions[0], // which e
-                choices: mainOptions, // need to update
-                name: 'employee',
+                message: updateEmplRoleOptions[0], // employee
+                choices: employeesObject.map(employee => ({
+                  name: employee.full_name,
+                  value: employee.id
+              })),
+                name: 'updatedEmployee',
             },
             {
                 type: 'list',
-                message: updateEmplRoleOptions[1], // which r
-                choices: mainOptions, // need to update
-                name: 'emplRole',
+                message: updateEmplRoleOptions[1], // role
+                choices: rolesObject.map(role => ({
+                  name: role.title,
+                  value: role.id
+              })),
+                name: 'updatedEmployeeRole',
             },
         ])
         .then((response) => {
-            // pool.query(
-            //     `${response}`,
-            //     (err: Error, _result: QueryResult) => {
-            //         if (err) {
-            //             console.log(err);
-            //         } else {
-            //             console.log(`Updated employee\'s role`);
-            //             menu();
-            //         }
-            //     })
-            console.log(response); // remove once above is complete
-            menu(); // remove once above is complete
+          // add console logs
+          // console.log(response.updatedEmployeeRole);
+          // console.log(response.updatedEmployee);
+          // menu(); // remove when done
+            pool.query(
+              'UPDATE employees SET role_id = $1 WHERE id = $2',
+              [response.updatedEmployeeRole, response.updatedEmployee],
+              (err: Error, _result: QueryResult) => {
+                  if (err) {
+                      console.log(err);
+                  } else {
+                      // console.log(`Updated ${response.updatedEmployee}\'s role to ${response.updatedEmployeeRole}!`); //print name instead of numbers?
+                      console.log(`Updated employee\'s role!`);
+                      menu();
+                  }
+              })
         })
 };
 
+// done
 async function addRole() {
     const depts = await pool.query('SELECT id, name FROM departments');
     const deptsObject = depts.rows;
-    console.log(deptsObject);
     inquirer
         .prompt([
             { // 0
                 type: 'input',
-                message: addRoleOptions[0], // role name
+                message: addRoleOptions[0], // role 
                 name: 'newRoleName',
             },
             { // 1
                 type: 'input',
-                message: addRoleOptions[1], // role salary
+                message: addRoleOptions[1], // salary
                 name: 'newRoleSalary',
             },
             { // 2
                 type: 'list',
-                message: addRoleOptions[2], // role dept
+                message: addRoleOptions[2], // department
                 choices: deptsObject.map(department => ({
                     name: department.name,
                     value: department.id
@@ -225,29 +252,31 @@ async function addRole() {
         })
 };
 
+// done
 function addDept() {
     inquirer
         .prompt([
             { // 0
                 type: 'input',
-                message: addDeptOptions[0], // department name
-                name: 'deptName',
+                message: addDeptOptions[0], // department
+                name: 'newDeptName',
             },
         ])
         .then((response) => {
             pool.query(
                 'INSERT INTO departments (name) VALUES ($1)',
-                [response.deptName],
+                [response.newDeptName],
                 (err: Error, _result: QueryResult) => {
                     if (err) {
                         console.log(err);
                     } else {
-                        console.log(`Department added`);
+                        console.log(`${response.newDeptName} department added!`);
                         menu();
                     }
                 })
         })
 };
+
 
 // Function call to initialize app
 menu();
